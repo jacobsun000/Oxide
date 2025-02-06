@@ -6,12 +6,13 @@ use std::str::Chars;
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     // Keywords
-    Null,
     Let,
     If,
     Else,
     For,
     While,
+    Continue,
+    Break,
     Fn,
     Return,
     Class,
@@ -219,6 +220,8 @@ impl Lexer {
             "else" => Token::Else,
             "for" => Token::For,
             "while" => Token::While,
+            "contirue" => Token::Continue,
+            "break" => Token::Break,
             "fn" => Token::Fn,
             "return" => Token::Return,
             "class" => Token::Class,
