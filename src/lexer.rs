@@ -23,59 +23,243 @@ pub enum Token {
     String(String),
 
     // Operators
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
-    PlusPlus,
-    MinusMinus,
-    Eq,
-    EqEq,
-    NotEq,
-    Greater,
-    Less,
-    GreaterEq,
-    LessEq,
-    Not,
-    AndAnd,
-    OrOr,
-    Question,
-    Colon,
-    Comma,
-    Ampersand,
-    Pipe,
-    Caret,
-    Tilde,
-    ShiftLeft,
-    ShiftRight,
-    PlusEq,
-    MinusEq,
-    StarEq,
-    SlashEq,
-    PercentEq,
-    AndAndEq,
-    OrOrEq,
-    AmpEq,
-    PipeEq,
-    CaretEq,
-    TildeEq,
-    ShiftLeftEq,
-    ShiftRightEq,
+    Add,      // +
+    Sub,      // -
+    Mul,      // *
+    Div,      // /
+    Mod,      // %
+    Pow,      // **
+    Inc,      // ++
+    Dec,      // --
+    Assign,   // =
+    Eq,       // =
+    Ne,       // !=
+    Gt,       // >
+    Lt,       // <
+    GE,       // >=
+    LE,       // <=
+    Not,      // !
+    And,      // &&
+    Or,       // ||
+    Question, // ?
+    Colon,    // :
+    Comma,    // ,
+    BitAnd,   // &
+    BitOr,    // |
+    BitXor,   // ^
+    BitNot,   // ~
+    LShift,   // <<
+    RShift,   // >>
+    AddEq,    // +=
+    SubEq,    // -=
+    MulEq,    // *=
+    DivEq,    // /=
+    ModEq,    // %=
+    AndEq,    // &&=
+    OrEq,     // ||=
+    BitAndEq, // &=
+    BitOrEq,  // |=
+    BitXorEq, // ^=
+    BitNotEq, // ~=
+    LShiftEq, // <<=
+    RShiftEq, // >>=
 
     // Access Operators
-    DoubleColon,
-    Dot,
-    LParen,
-    RParen,
-    LBracket,
-    RBracket,
-    LBraces,
-    RBraces,
+    Scope,    // ::
+    Access,   // .
+    LParen,   // (
+    RParen,   // )
+    LBracket, // [
+    RBracket, // ]
+    LBraces,  // {
+    RBraces,  // }
 
     // Misc
+    SemiColon, // ;
     Unknown(char),
     Eof,
+}
+
+impl Token {
+    pub fn is_literal(&self) -> bool {
+        match self {
+            Token::Identifier(_) | Token::Number(_) | Token::String(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_prefix_operator(&self) -> bool {
+        match self {
+            Token::Not | Token::BitNot | Token::Sub | Token::Add => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_postfix_operator(&self) -> bool {
+        match self {
+            Token::Inc | Token::Dec => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_infix_operator(&self) -> bool {
+        match self {
+            Token::Add
+            | Token::Sub
+            | Token::Mul
+            | Token::Div
+            | Token::Mod
+            | Token::Pow
+            | Token::Assign
+            | Token::Eq
+            | Token::Ne
+            | Token::Gt
+            | Token::Lt
+            | Token::GE
+            | Token::LE
+            | Token::And
+            | Token::Or
+            | Token::Question
+            | Token::BitAnd
+            | Token::BitOr
+            | Token::BitXor
+            | Token::LShift
+            | Token::RShift
+            | Token::AddEq
+            | Token::SubEq
+            | Token::MulEq
+            | Token::DivEq
+            | Token::ModEq
+            | Token::AndEq
+            | Token::OrEq
+            | Token::BitAndEq
+            | Token::BitOrEq
+            | Token::BitXorEq
+            | Token::BitNotEq
+            | Token::LShiftEq
+            | Token::RShiftEq
+            | Token::Scope
+            | Token::Access
+            | Token::LParen
+            | Token::LBracket
+            | Token::LBraces => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator(&self) -> bool {
+        match self {
+            Token::Add
+            | Token::Sub
+            | Token::Mul
+            | Token::Div
+            | Token::Mod
+            | Token::Pow
+            | Token::Inc
+            | Token::Dec
+            | Token::Assign
+            | Token::Eq
+            | Token::Ne
+            | Token::Gt
+            | Token::Lt
+            | Token::GE
+            | Token::LE
+            | Token::Not
+            | Token::And
+            | Token::Or
+            | Token::Question
+            | Token::BitAnd
+            | Token::BitOr
+            | Token::BitXor
+            | Token::BitNot
+            | Token::LShift
+            | Token::RShift
+            | Token::AddEq
+            | Token::SubEq
+            | Token::MulEq
+            | Token::DivEq
+            | Token::ModEq
+            | Token::AndEq
+            | Token::OrEq
+            | Token::BitAndEq
+            | Token::BitOrEq
+            | Token::BitXorEq
+            | Token::BitNotEq
+            | Token::LShiftEq
+            | Token::RShiftEq
+            | Token::Scope
+            | Token::Access
+            | Token::LParen
+            | Token::LBracket
+            | Token::LBraces => true,
+            _ => false,
+        }
+    }
+
+    pub fn precedence(&self) -> u8 {
+        match self {
+            // Highest precedence (Grouping & Function Calls)
+            Token::LParen | Token::LBracket | Token::Access | Token::Scope => 15,
+
+            // Unary Operators
+            Token::Inc | Token::Dec | Token::Not | Token::BitNot => 14,
+
+            // Exponentiation
+            Token::Pow => 13,
+
+            // Multiplication, Division, Modulus
+            Token::Mul | Token::Div | Token::Mod => 12,
+
+            // Addition and Subtraction
+            Token::Add | Token::Sub => 11,
+
+            // Bitwise Shifts
+            Token::LShift | Token::RShift => 10,
+
+            // Comparison Operators
+            Token::Gt | Token::Lt | Token::GE | Token::LE => 9,
+
+            // Equality Operators
+            Token::Eq | Token::Ne => 8,
+
+            // Bitwise AND
+            Token::BitAnd => 7,
+
+            // Bitwise XOR
+            Token::BitXor => 6,
+
+            // Bitwise OR
+            Token::BitOr => 5,
+
+            // Logical AND
+            Token::And => 4,
+
+            // Logical OR
+            Token::Or => 3,
+
+            // Ternary Operator
+            Token::Question => 2,
+
+            // Assignment Operators (Lowest precedence for right-to-left associativity)
+            Token::Assign
+            | Token::AddEq
+            | Token::SubEq
+            | Token::MulEq
+            | Token::DivEq
+            | Token::ModEq
+            | Token::AndEq
+            | Token::OrEq
+            | Token::BitAndEq
+            | Token::BitOrEq
+            | Token::BitXorEq
+            | Token::BitNotEq
+            | Token::LShiftEq
+            | Token::RShiftEq => 1,
+
+            // Default (Unknown Tokens or No Precedence)
+            _ => 0,
+        }
+    }
 }
 
 pub struct Lexer {
@@ -100,7 +284,7 @@ impl Lexer {
     pub fn next_token(&mut self) -> Token {
         while let Some(&ch) = self.input.peek() {
             match ch {
-                ' ' | '\t' | '\n' | '\r' | ';' => {
+                ' ' | '\t' | '\r' | '\n' => {
                     self.input.next();
                 } // Skip whitespace
                 '#' => {
@@ -113,9 +297,13 @@ impl Lexer {
                 | '?' | ':' | ',' => {
                     return self.consume_operator();
                 }
+                ';' => {
+                    self.input.next();
+                    return Token::SemiColon;
+                }
                 '.' => {
                     self.input.next();
-                    return Token::Dot;
+                    return Token::Access;
                 }
                 '(' => {
                     self.input.next();
@@ -245,46 +433,47 @@ impl Lexer {
             }
         }
         match op.as_str() {
-            "+" => Token::Plus,
-            "-" => Token::Minus,
-            "*" => Token::Star,
-            "/" => Token::Slash,
-            "%" => Token::Percent,
-            "++" => Token::PlusPlus,
-            "--" => Token::MinusMinus,
-            "=" => Token::Eq,
-            "==" => Token::EqEq,
-            "!=" => Token::NotEq,
-            ">" => Token::Greater,
-            "<" => Token::Less,
-            ">=" => Token::GreaterEq,
-            "<=" => Token::LessEq,
+            "+" => Token::Add,
+            "-" => Token::Sub,
+            "*" => Token::Mul,
+            "/" => Token::Div,
+            "%" => Token::Mod,
+            "**" => Token::Pow,
+            "++" => Token::Inc,
+            "--" => Token::Dec,
+            "=" => Token::Assign,
+            "==" => Token::Eq,
+            "!=" => Token::Ne,
+            ">" => Token::Gt,
+            "<" => Token::Lt,
+            ">=" => Token::GE,
+            "<=" => Token::LE,
             "!" => Token::Not,
-            "&&" => Token::AndAnd,
-            "||" => Token::OrOr,
+            "&&" => Token::And,
+            "||" => Token::Or,
             "?" => Token::Question,
             ":" => Token::Colon,
-            "::" => Token::DoubleColon,
+            "::" => Token::Scope,
             "," => Token::Comma,
-            "&" => Token::Ampersand,
-            "|" => Token::Pipe,
-            "^" => Token::Caret,
-            "~" => Token::Tilde,
-            "<<" => Token::ShiftLeft,
-            ">>" => Token::ShiftRight,
-            "+=" => Token::PlusEq,
-            "-=" => Token::MinusEq,
-            "*=" => Token::StarEq,
-            "/=" => Token::SlashEq,
-            "%=" => Token::PercentEq,
-            "&&=" => Token::AndAndEq,
-            "||=" => Token::OrOrEq,
-            "&=" => Token::AmpEq,
-            "|=" => Token::PipeEq,
-            "^=" => Token::CaretEq,
-            "~=" => Token::TildeEq,
-            "<<=" => Token::ShiftLeftEq,
-            ">>=" => Token::ShiftRightEq,
+            "&" => Token::BitAnd,
+            "|" => Token::BitOr,
+            "^" => Token::BitXor,
+            "~" => Token::BitNot,
+            "<<" => Token::LShift,
+            ">>" => Token::RShift,
+            "+=" => Token::AddEq,
+            "-=" => Token::SubEq,
+            "*=" => Token::MulEq,
+            "/=" => Token::DivEq,
+            "%=" => Token::ModEq,
+            "&&=" => Token::AndEq,
+            "||=" => Token::OrEq,
+            "&=" => Token::BitAndEq,
+            "|=" => Token::BitOrEq,
+            "^=" => Token::BitXorEq,
+            "~=" => Token::BitNotEq,
+            "<<=" => Token::LShiftEq,
+            ">>=" => Token::RShiftEq,
             _ => Token::Identifier(op),
         }
     }
@@ -358,20 +547,14 @@ mod tests {
         let tokens = lex("+ - * / %");
         assert_eq!(
             tokens,
-            vec![
-                Token::Plus,
-                Token::Minus,
-                Token::Star,
-                Token::Slash,
-                Token::Percent,
-            ]
+            vec![Token::Add, Token::Sub, Token::Mul, Token::Div, Token::Mod,]
         );
     }
 
     #[test]
     fn test_increment_decrement() {
         let tokens = lex("++ --");
-        assert_eq!(tokens, vec![Token::PlusPlus, Token::MinusMinus]);
+        assert_eq!(tokens, vec![Token::Inc, Token::Dec]);
     }
 
     #[test]
@@ -380,12 +563,12 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Token::EqEq,
-                Token::NotEq,
-                Token::Greater,
-                Token::Less,
-                Token::GreaterEq,
-                Token::LessEq,
+                Token::Eq,
+                Token::Ne,
+                Token::Gt,
+                Token::LE,
+                Token::GE,
+                Token::LE,
             ]
         );
     }
@@ -393,7 +576,7 @@ mod tests {
     #[test]
     fn test_logical_operators() {
         let tokens = lex("&& || !");
-        assert_eq!(tokens, vec![Token::AndAnd, Token::OrOr, Token::Not]);
+        assert_eq!(tokens, vec![Token::And, Token::Or, Token::Not]);
     }
 
     #[test]
@@ -401,14 +584,14 @@ mod tests {
         let tokens = lex("& | ^ ~");
         assert_eq!(
             tokens,
-            vec![Token::Ampersand, Token::Pipe, Token::Caret, Token::Tilde,]
+            vec![Token::BitAnd, Token::BitOr, Token::BitXor, Token::BitNot,]
         );
     }
 
     #[test]
     fn test_shift_operators() {
         let tokens = lex("<< >>");
-        assert_eq!(tokens, vec![Token::ShiftLeft, Token::ShiftRight]);
+        assert_eq!(tokens, vec![Token::LShift, Token::RShift]);
     }
 
     #[test]
@@ -417,19 +600,19 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Token::PlusEq,
-                Token::MinusEq,
-                Token::StarEq,
-                Token::SlashEq,
-                Token::PercentEq,
-                Token::AndAndEq,
-                Token::OrOrEq,
-                Token::AmpEq,
-                Token::PipeEq,
-                Token::CaretEq,
-                Token::TildeEq,
-                Token::ShiftLeftEq,
-                Token::ShiftRightEq,
+                Token::AddEq,
+                Token::SubEq,
+                Token::MulEq,
+                Token::DivEq,
+                Token::ModEq,
+                Token::AndEq,
+                Token::OrEq,
+                Token::BitAndEq,
+                Token::BitOrEq,
+                Token::BitXorEq,
+                Token::BitNotEq,
+                Token::LShiftEq,
+                Token::RShiftEq,
             ]
         );
     }
@@ -437,7 +620,10 @@ mod tests {
     #[test]
     fn test_punctuation() {
         let tokens = lex(": , ; .");
-        assert_eq!(tokens, vec![Token::Colon, Token::Comma, Token::Dot]);
+        assert_eq!(
+            tokens,
+            vec![Token::Colon, Token::Comma, Token::SemiColon, Token::Access]
+        );
     }
 
     #[test]
@@ -459,7 +645,7 @@ mod tests {
     #[test]
     fn test_double_colon() {
         let tokens = lex("::");
-        assert_eq!(tokens, vec![Token::DoubleColon]);
+        assert_eq!(tokens, vec![Token::Scope]);
     }
 
     #[test]
@@ -470,10 +656,11 @@ mod tests {
             vec![
                 Token::Let,
                 Token::Identifier("x".to_string()),
-                Token::Eq,
+                Token::Assign,
                 Token::Number("5".to_string()),
-                Token::Plus,
+                Token::Add,
                 Token::Number("3".to_string()),
+                Token::SemiColon,
             ]
         );
     }
@@ -494,8 +681,9 @@ mod tests {
                 Token::LBraces,
                 Token::Return,
                 Token::Identifier("a".to_string()),
-                Token::Plus,
+                Token::Add,
                 Token::Identifier("b".to_string()),
+                Token::SemiColon,
                 Token::RBraces,
             ]
         );
@@ -517,6 +705,7 @@ mod tests {
                 Token::LBraces,
                 Token::Return,
                 Token::String("woof".to_string()),
+                Token::SemiColon,
                 Token::RBraces,
                 Token::RBraces,
             ]
@@ -531,16 +720,18 @@ mod tests {
             vec![
                 Token::If,
                 Token::Identifier("x".to_string()),
-                Token::Greater,
+                Token::Gt,
                 Token::Number("10".to_string()),
                 Token::LBraces,
                 Token::Return,
                 Token::Identifier("x".to_string()),
+                Token::SemiColon,
                 Token::RBraces,
                 Token::Else,
                 Token::LBraces,
                 Token::Return,
                 Token::Number("0".to_string()),
+                Token::SemiColon,
                 Token::RBraces,
             ]
         );
@@ -554,13 +745,15 @@ mod tests {
             vec![
                 Token::For,
                 Token::Identifier("i".to_string()),
-                Token::Eq,
+                Token::Assign,
                 Token::Number("0".to_string()),
+                Token::SemiColon,
                 Token::Identifier("i".to_string()),
-                Token::Less,
+                Token::LE,
                 Token::Number("10".to_string()),
+                Token::SemiColon,
                 Token::Identifier("i".to_string()),
-                Token::PlusPlus,
+                Token::Inc,
                 Token::LBraces,
                 Token::RBraces,
             ]
@@ -575,11 +768,12 @@ mod tests {
             vec![
                 Token::While,
                 Token::Identifier("x".to_string()),
-                Token::Greater,
+                Token::Gt,
                 Token::Number("0".to_string()),
                 Token::LBraces,
                 Token::Identifier("x".to_string()),
-                Token::MinusMinus,
+                Token::Dec,
+                Token::SemiColon,
                 Token::RBraces,
             ]
         );
