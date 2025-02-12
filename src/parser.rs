@@ -1,7 +1,7 @@
 use crate::lexer::Token;
 use std::iter::Peekable;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expr {
     Identifier(String),
     Integer(i64),
@@ -15,26 +15,26 @@ pub enum Expr {
     },
     Return(Box<Expr>),
     If {
-        condition: Box<Expr>,
+        cond: Box<Expr>,
         then_block: Box<Expr>,
         else_block: Option<Box<Expr>>,
     },
     While {
-        condition: Box<Expr>,
+        cond: Box<Expr>,
         body: Box<Expr>,
     },
     Infix {
         left: Box<Expr>,
-        operator: Token,
+        op: Token,
         right: Box<Expr>,
     },
     Prefix {
-        operator: Token,
-        operand: Box<Expr>,
+        op: Token,
+        expr: Box<Expr>,
     },
     Postfix {
-        operand: Box<Expr>,
-        operator: Token,
+        expr: Box<Expr>,
+        op: Token,
     },
     Null,
 }
@@ -110,7 +110,7 @@ impl Parser {
 
         Ok(Expr::Infix {
             left: Box::new(Expr::Identifier(name)),
-            operator: Token::Assign,
+            op: Token::Assign,
             right: Box::new(Expr::Function {
                 params: Box::new(params),
                 body: Box::new(body),
@@ -147,7 +147,7 @@ impl Parser {
         };
 
         Ok(Expr::If {
-            condition: Box::new(condition),
+            cond: Box::new(condition),
             then_block,
             else_block,
         })
@@ -156,10 +156,12 @@ impl Parser {
     fn parse_while(&mut self) -> Result<Expr, ParseError> {
         let condition = Box::new(self.parse_expr(0)?);
         let body = Box::new(self.parse_block(Token::RBraces, Token::SemiColon, true)?);
-        Ok(Expr::While { condition, body })
+        Ok(Expr::While {
+            cond: condition,
+            body,
+        })
     }
 
-    // Expression parsing
     fn parse_expr(&mut self, precedence: u8) -> Result<Expr, ParseError> {
         let token = self.tokens.peek().ok_or(ParseError::UnexpectedEof)?;
         let mut left = match token {
@@ -195,20 +197,20 @@ impl Parser {
         };
         while let Some(operator) = self.match_operator() {
             let next_precedence = operator.precedence();
-            if precedence >= next_precedence {
+            if precedence > next_precedence {
                 break;
             }
             if operator.is_postfix_operator() {
                 left = Expr::Postfix {
-                    operand: Box::new(left),
-                    operator,
+                    expr: Box::new(left),
+                    op: operator,
                 };
                 continue;
             }
             let right = self.parse_expr(next_precedence)?;
             left = Expr::Infix {
                 left: Box::new(left),
-                operator,
+                op: operator,
                 right: Box::new(right),
             };
         }
@@ -232,8 +234,8 @@ impl Parser {
             self.tokens.next();
             let operand = self.parse_expr(next_precedence)?;
             Ok(Expr::Prefix {
-                operator: token,
-                operand: Box::new(operand),
+                op: token,
+                expr: Box::new(operand),
             })
         } else {
             Err(ParseError::InvalidToken(token.clone()))

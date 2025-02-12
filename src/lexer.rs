@@ -82,182 +82,155 @@ pub enum Token {
 
 impl Token {
     pub fn is_literal(&self) -> bool {
+        use Token::*;
         match self {
-            Token::Identifier(_) | Token::Number(_) | Token::String(_) => true,
+            Identifier(_) | Number(_) | String(_) => true,
             _ => false,
         }
     }
 
     pub fn is_prefix_operator(&self) -> bool {
+        use Token::*;
         match self {
-            Token::Not | Token::BitNot | Token::Sub | Token::Add => true,
+            Not | BitNot | Sub | Add => true,
             _ => false,
         }
     }
 
     pub fn is_postfix_operator(&self) -> bool {
+        use Token::*;
         match self {
-            Token::Inc | Token::Dec => true,
+            Inc | Dec => true,
             _ => false,
         }
     }
 
     pub fn is_infix_operator(&self) -> bool {
+        use Token::*;
         match self {
-            Token::Add
-            | Token::Sub
-            | Token::Mul
-            | Token::Div
-            | Token::Mod
-            | Token::Pow
-            | Token::Assign
-            | Token::Eq
-            | Token::Ne
-            | Token::Gt
-            | Token::Lt
-            | Token::GE
-            | Token::LE
-            | Token::And
-            | Token::Or
-            | Token::Question
-            | Token::BitAnd
-            | Token::BitOr
-            | Token::BitXor
-            | Token::LShift
-            | Token::RShift
-            | Token::AddEq
-            | Token::SubEq
-            | Token::MulEq
-            | Token::DivEq
-            | Token::ModEq
-            | Token::AndEq
-            | Token::OrEq
-            | Token::BitAndEq
-            | Token::BitOrEq
-            | Token::BitXorEq
-            | Token::BitNotEq
-            | Token::LShiftEq
-            | Token::RShiftEq
-            | Token::Scope
-            | Token::Access
-            | Token::LParen
-            | Token::LBracket
-            | Token::LBraces => true,
+            Add | Sub | Mul | Div | Mod | Pow | Assign | Eq | Ne | Gt | Lt | GE | LE | And | Or
+            | Question | BitAnd | BitOr | BitXor | LShift | RShift | AddEq | SubEq | MulEq
+            | DivEq | ModEq | AndEq | OrEq | BitAndEq | BitOrEq | BitXorEq | BitNotEq
+            | LShiftEq | RShiftEq | Scope | Access | LParen | LBracket | LBraces => true,
             _ => false,
         }
     }
 
     pub fn is_operator(&self) -> bool {
+        use Token::*;
         match self {
-            Token::Add
-            | Token::Sub
-            | Token::Mul
-            | Token::Div
-            | Token::Mod
-            | Token::Pow
-            | Token::Inc
-            | Token::Dec
-            | Token::Assign
-            | Token::Eq
-            | Token::Ne
-            | Token::Gt
-            | Token::Lt
-            | Token::GE
-            | Token::LE
-            | Token::Not
-            | Token::And
-            | Token::Or
-            | Token::Question
-            | Token::BitAnd
-            | Token::BitOr
-            | Token::BitXor
-            | Token::BitNot
-            | Token::LShift
-            | Token::RShift
-            | Token::AddEq
-            | Token::SubEq
-            | Token::MulEq
-            | Token::DivEq
-            | Token::ModEq
-            | Token::AndEq
-            | Token::OrEq
-            | Token::BitAndEq
-            | Token::BitOrEq
-            | Token::BitXorEq
-            | Token::BitNotEq
-            | Token::LShiftEq
-            | Token::RShiftEq
-            | Token::Scope
-            | Token::Access
-            | Token::LParen
-            | Token::LBracket
-            | Token::LBraces => true,
+            Add | Sub | Mul | Div | Mod | Pow | Inc | Dec | Assign | Eq | Ne | Gt | Lt | GE
+            | LE | Not | And | Or | Question | BitAnd | BitOr | BitXor | BitNot | LShift
+            | RShift | AddEq | SubEq | MulEq | DivEq | ModEq | AndEq | OrEq | BitAndEq
+            | BitOrEq | BitXorEq | BitNotEq | LShiftEq | RShiftEq | Scope | Access | LParen
+            | LBracket | LBraces => true,
             _ => false,
         }
     }
 
     pub fn precedence(&self) -> u8 {
+        use Token::*;
         match self {
             // Highest precedence (Grouping & Function Calls)
-            Token::LParen | Token::LBracket | Token::Access | Token::Scope => 15,
+            LParen | LBracket | Access | Scope => 15,
 
             // Unary Operators
-            Token::Inc | Token::Dec | Token::Not | Token::BitNot => 14,
+            Inc | Dec | Not | BitNot => 14,
 
             // Exponentiation
-            Token::Pow => 13,
+            Pow => 13,
 
             // Multiplication, Division, Modulus
-            Token::Mul | Token::Div | Token::Mod => 12,
+            Mul | Div | Mod => 12,
 
             // Addition and Subtraction
-            Token::Add | Token::Sub => 11,
+            Add | Sub => 11,
 
             // Bitwise Shifts
-            Token::LShift | Token::RShift => 10,
+            LShift | RShift => 10,
 
             // Comparison Operators
-            Token::Gt | Token::Lt | Token::GE | Token::LE => 9,
+            Gt | Lt | GE | LE => 9,
 
             // Equality Operators
-            Token::Eq | Token::Ne => 8,
+            Eq | Ne => 8,
 
             // Bitwise AND
-            Token::BitAnd => 7,
+            BitAnd => 7,
 
             // Bitwise XOR
-            Token::BitXor => 6,
+            BitXor => 6,
 
             // Bitwise OR
-            Token::BitOr => 5,
+            BitOr => 5,
 
             // Logical AND
-            Token::And => 4,
+            And => 4,
 
             // Logical OR
-            Token::Or => 3,
+            Or => 3,
 
             // Ternary Operator
-            Token::Question => 2,
+            Question => 2,
 
             // Assignment Operators (Lowest precedence for right-to-left associativity)
-            Token::Assign
-            | Token::AddEq
-            | Token::SubEq
-            | Token::MulEq
-            | Token::DivEq
-            | Token::ModEq
-            | Token::AndEq
-            | Token::OrEq
-            | Token::BitAndEq
-            | Token::BitOrEq
-            | Token::BitXorEq
-            | Token::BitNotEq
-            | Token::LShiftEq
-            | Token::RShiftEq => 1,
+            Assign | AddEq | SubEq | MulEq | DivEq | ModEq | AndEq | OrEq | BitAndEq | BitOrEq
+            | BitXorEq | BitNotEq | LShiftEq | RShiftEq => 1,
 
             // Default (Unknown Tokens or No Precedence)
             _ => 0,
+        }
+    }
+
+    pub fn op_code(&self) -> Option<&'static str> {
+        use Token::*;
+        match self {
+            Add => Some("__add__"),
+            Sub => Some("__sub__"),
+            Mul => Some("__mul__"),
+            Div => Some("__div__"),
+            Mod => Some("__mod__"),
+            Pow => Some("__pow__"),
+            Inc => Some("__inc__"),
+            Dec => Some("__dec__"),
+            Assign => Some("__assign__"),
+            Eq => Some("__eq__"),
+            Ne => Some("__ne__"),
+            Gt => Some("__gt__"),
+            Lt => Some("__lt__"),
+            GE => Some("__ge__"),
+            LE => Some("__le__"),
+            Not => Some("__not__"),
+            And => Some("__and__"),
+            Or => Some("__or__"),
+            Question => Some("__question__"),
+            Colon => Some("__colon__"),
+            Comma => Some("__comma__"),
+            BitAnd => Some("__bitand__"),
+            BitOr => Some("__bitor__"),
+            BitXor => Some("__bitxor__"),
+            BitNot => Some("__bitnot__"),
+            LShift => Some("__lshift__"),
+            RShift => Some("__rshift__"),
+            AddEq => Some("__addeq__"),
+            SubEq => Some("__subeq__"),
+            MulEq => Some("__muleq__"),
+            DivEq => Some("__diveq__"),
+            ModEq => Some("__modeq__"),
+            AndEq => Some("__andeq__"),
+            OrEq => Some("__oreq__"),
+            BitAndEq => Some("__bitandeq__"),
+            BitOrEq => Some("__bitoreq__"),
+            BitXorEq => Some("__bitxoreq__"),
+            BitNotEq => Some("__bitnoteq__"),
+            LShiftEq => Some("__lshifteq__"),
+            RShiftEq => Some("__rshifteq__"),
+            Scope => Some("__scope__"),
+            Access => Some("__access__"),
+            LParen => Some("__lparen__"),
+            LBracket => Some("__lbracket__"),
+            LBraces => Some("__lbraces__"),
+            _ => None,
         }
     }
 }
