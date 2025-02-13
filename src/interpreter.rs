@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -20,71 +21,50 @@ pub enum Value {
         params: Vec<String>,
         body: fn(Vec<Object>) -> Object,
     },
-    Null,
+    None,
     Object(Box<Object>),
 }
 
+// Implement as_int, ... methods for Value
+macro_rules! impl_as_methods {
+    ($($method_name:ident: $variant:ident => $ty:ty),+ $(,)?) => {
+        impl Value {
+            $(
+                pub fn $method_name(&self) -> Option<$ty> {
+                    if let Value::$variant(v) = self {
+                        Some(v.clone())
+                    } else {
+                        None
+                    }
+                }
+            )+
+        }
+    };
+}
+
+impl_as_methods! {
+    as_i64: Integer => i64,
+    as_f64: Float => f64,
+    as_bool: Bool => bool,
+    as_string: String => String,
+    as_vector: Vector => Vec<Object>,
+    as_dict: Dict => HashMap<String, Object>,
+}
+
 impl Value {
-    pub fn as_int(&self) -> i64 {
-        match self {
-            Self::Integer(n) => *n,
-            _ => unreachable!(),
+    pub fn as_native_func(&self) -> (&Vec<String>, fn(Vec<Object>) -> Object) {
+        if let Value::NativeFunc { params, body } = self {
+            (params, *body)
+        } else {
+            panic!("Value is not a native function");
         }
     }
 
-    pub fn as_float(&self) -> f64 {
-        match self {
-            Self::Float(n) => *n,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_bool(&self) -> bool {
-        match self {
-            Self::Bool(b) => *b,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_string(&self) -> String {
-        match self {
-            Self::String(s) => s.clone(),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_vector(&self) -> Vec<Object> {
-        match self {
-            Self::Vector(v) => v.clone(),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_dict(&self) -> HashMap<String, Object> {
-        match self {
-            Self::Dict(d) => d.clone(),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_func(&self) -> (Box<Expr>, Box<Expr>) {
-        match self {
-            Self::Func { params, body } => (params.clone(), body.clone()),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_native_func(&self) -> (Vec<String>, fn(Vec<Object>) -> Object) {
-        match self {
-            Self::NativeFunc { params, body } => (params.clone(), *body),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn as_object(&self) -> Box<Object> {
-        match self {
-            Self::Object(obj) => obj.clone(),
-            _ => unreachable!(),
+    pub fn as_func(&self) -> (&Box<Expr>, &Box<Expr>) {
+        if let Value::Func { params, body } = self {
+            (params, body)
+        } else {
+            panic!("Value is not a function");
         }
     }
 }
@@ -96,8 +76,54 @@ pub struct Object {
     pub fields: HashMap<String, Object>,
 }
 
+macro_rules! define_native_infix_ops {
+    ($type_name:expr, $(($name:expr, $lhs_ty:ident, $rhs_ty:ident, $operation:expr, $constructor:ident)),+ $(,)?) => {
+        [
+            $(
+                (
+                    $name.to_string(),
+                    Object::new_native_function(vec!["lhs".to_string(), "rhs".to_string()], |args| {
+                        expect_args_length(&args, 2, concat!($type_name, ".", $name));
+                        let lhs = args[0]
+                            .value
+                            .$lhs_ty()
+                            .expect(concat!($type_name, ".", $name, "(): Invalid argument type"));
+                        let rhs = args[1]
+                            .value
+                            .$rhs_ty()
+                            .expect(concat!($type_name, ".", $name, "(): Invalid argument type"));
+                        let result = $operation(lhs, rhs);
+                        Object::$constructor(result)
+                    }),
+                )
+            ),+
+        ]
+    };
+}
+
+macro_rules! define_native_unary_ops {
+    ($type_name:expr, $(($name:expr, $input_ty:ident, $operation:expr, $constructor:ident)),+ $(,)?) => {
+        [
+            $(
+                (
+                    $name.to_string(),
+                    Object::new_native_function(vec!["value".to_string()], |args| {
+                        expect_args_length(&args, 1, concat!($type_name, ".", $name));
+                        let val = args[0]
+                            .value
+                            .$input_ty()
+                            .expect(concat!($type_name, ".", $name, "(): Invalid argument type"));
+                        let result = $operation(val);
+                        Object::$constructor(result)
+                    }),
+                )
+            ),+
+        ]
+    };
+}
+
 impl Object {
-    const ID_NULL: usize = 0;
+    const ID_NONE: usize = 0;
     const ID_INT: usize = 1;
     const ID_FLOAT: usize = 2;
     const ID_BOOL: usize = 3;
@@ -110,49 +136,57 @@ impl Object {
     pub fn new(typeid: usize) -> Self {
         Self {
             typeid,
-            value: Value::Null,
+            value: Value::None,
             fields: HashMap::new(),
         }
     }
 
     pub fn new_null() -> Self {
-        Self::new(Self::ID_NULL)
+        Self::new(Self::ID_NONE)
     }
 
     pub fn new_int(value: i64) -> Self {
-        let fields = HashMap::from([
+        let infix_ops = define_native_infix_ops!(
+            "Int",
+            ("__add__", as_i64, as_i64, |l, r| l + r, new_int),
+            ("__sub__", as_i64, as_i64, |l, r| l - r, new_int),
+            ("__mul__", as_i64, as_i64, |l, r| l * r, new_int),
+            ("__div__", as_i64, as_i64, |l, r| l / r, new_int),
+            ("__mod__", as_i64, as_i64, |l, r| l % r, new_int),
+            ("__mod__", as_i64, as_i64, |l, r| l % r, new_int),
+            ("__bitand__", as_i64, as_i64, |l, r| l & r, new_int),
+            ("__bitor__", as_i64, as_i64, |l, r| l | r, new_int),
+            ("__bitxor__", as_i64, as_i64, |l, r| l ^ r, new_int),
+            ("__lshift__", as_i64, as_i64, |l, r| l << r, new_int),
+            ("__rshift__", as_i64, as_i64, |l, r| l >> r, new_int),
             (
-                "__add__".to_string(),
-                Self::new_native_function(vec!["lhs".to_string(), "rhs".to_string()], |args| {
-                    if args.len() != 2 {
-                        panic!("Int.__add__(): Invalid number of arguments");
-                    }
-                    let lhs = match &args[0].value {
-                        Value::Integer(n) => *n,
-                        _ => panic!("Int.__add__(): Invalid argument type"),
-                    };
-                    let rhs = match &args[1].value {
-                        Value::Integer(n) => *n,
-                        _ => panic!("Int.__add__(): Invalid argument type"),
-                    };
-                    let result = lhs + rhs;
-                    Object::new_int(result)
-                }),
+                "__cmp__",
+                as_i64,
+                as_i64,
+                |l: i64, r| cmp_to_i64(l.cmp(&r)),
+                new_int
             ),
             (
-                "__str__".to_string(),
-                Self::new_native_function(vec!["this".to_string()], |args| {
-                    if args.len() != 1 {
-                        panic!("Int.__str__(): Invalid number of arguments");
-                    }
-                    let val = match &args[0].value {
-                        Value::Integer(n) => *n,
-                        _ => panic!("Int.__str__(): Invalid argument type"),
-                    };
-                    Object::new_string(val.to_string())
-                }),
+                "__pow__",
+                as_i64,
+                as_i64,
+                |l: i64, r| l.pow(r as u32),
+                new_int
             ),
-        ]);
+        );
+        let unary_ops = define_native_unary_ops!(
+            "Int",
+            ("__not__", as_i64, |v: i64| !v, new_int),
+            ("__neg__", as_i64, |v: i64| -v, new_int),
+            ("__pos__", as_i64, |v: i64| v, new_int),
+            ("__str__", as_i64, |v: i64| v.to_string(), new_string),
+            ("__bitnot__", as_i64, |v: i64| !v, new_int),
+        );
+
+        let mut fields = HashMap::new();
+        fields.extend(infix_ops.iter().cloned());
+        fields.extend(unary_ops.iter().cloned());
+
         Self {
             typeid: Self::ID_INT,
             value: Value::Integer(value),
@@ -213,7 +247,7 @@ impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(str_method) = self.fields.get("__str__") {
             let result = str_method.value.as_native_func().1(vec![self.clone()]);
-            write!(f, "{}", result.value.as_string())
+            write!(f, "{}", result.value.as_string().unwrap_or("".to_string()))
         } else {
             write!(f, "{:?}", self.value)
         }
@@ -394,5 +428,24 @@ impl Interpreter {
         } else {
             Err(ControlFlow::Failure(format!("Invalid operator {:?}", op)))
         }
+    }
+}
+
+fn expect_args_length(args: &[Object], expected: usize, func_name: &str) {
+    if args.len() != expected {
+        panic!(
+            "{}(): Expected {} arguments, got {}",
+            func_name,
+            expected,
+            args.len()
+        );
+    }
+}
+
+fn cmp_to_i64(v: Ordering) -> i64 {
+    match v {
+        Ordering::Less => -1,
+        Ordering::Equal => 0,
+        Ordering::Greater => 1,
     }
 }
